@@ -11,7 +11,7 @@ const MacroBar = ({ label, value, max, color }: MacroBarProps) => {
   return (
     <div className="flex-1">
       <div className="flex justify-between items-center mb-1.5">
-        <span className="text-xs text-muted-foreground font-medium">{label}</span>
+        <span className="text-xs text-muted-foreground font-semibold">{label}</span>
         <span className="text-xs font-display font-semibold">{value}g <span className="text-muted-foreground">/ {max}g</span></span>
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">

@@ -107,7 +107,7 @@ const ProfilePage = ({ userName, profile, weightHistory, onAddWeight, onUpdatePr
           />
           <button
             onClick={handleLogWeight}
-            className="haptic-press touch-target h-12 px-5 rounded-xl bg-primary text-primary-foreground font-display font-semibold text-sm"
+            className="haptic-press touch-target h-12 min-w-[60px] px-6 rounded-xl bg-primary text-primary-foreground font-display font-semibold text-sm"
           >
             Log
           </button>
