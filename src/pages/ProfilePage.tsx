@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { UserProfile, WeightEntry, calculateTDEE, calculateMacros } from '@/hooks/useAppData';
-import { Scale, TrendingUp, RotateCcw, User, Flame, Dumbbell, Equal } from 'lucide-react';
+import { Scale, TrendingUp, RotateCcw, User, Flame, Dumbbell, Equal, LogOut } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ProfilePageProps {
+  userName: string;
   profile: UserProfile;
   weightHistory: WeightEntry[];
   onAddWeight: (weight: number) => void;
   onUpdateProfile: (profile: Partial<UserProfile>) => void;
+  onLogout: () => void;
   onReset: () => void;
 }
 
@@ -19,10 +21,11 @@ const goalConfig: Record<Goal, { label: string; icon: React.ComponentType<{ clas
   maintenance: { label: 'Maintain', icon: Equal, desc: 'TDEE = target' },
 };
 
-const ProfilePage = ({ profile, weightHistory, onAddWeight, onUpdateProfile, onReset }: ProfilePageProps) => {
+const ProfilePage = ({ userName, profile, weightHistory, onAddWeight, onUpdateProfile, onLogout, onReset }: ProfilePageProps) => {
   const [newWeight, setNewWeight] = useState(profile.weight.toString());
   const macros = calculateMacros(profile);
   const tdee = calculateTDEE(profile);
+  const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
 
   const handleLogWeight = () => {
     const w = parseFloat(newWeight);
@@ -47,8 +50,8 @@ const ProfilePage = ({ profile, weightHistory, onAddWeight, onUpdateProfile, onR
           <User className="w-7 h-7 text-primary" />
         </div>
         <div>
-          <div className="font-display font-semibold">{profile.gender === 'male' ? '♂' : '♀'} {profile.age} years</div>
-          <div className="text-muted-foreground text-sm">{profile.height}cm · {profile.weight}kg</div>
+          <div className="font-display font-semibold text-lg">{displayName}</div>
+          <div className="text-muted-foreground text-sm">{profile.gender === 'male' ? '♂' : '♀'} {profile.age}y · {profile.height}cm · {profile.weight}kg</div>
         </div>
       </div>
 
@@ -116,22 +119,8 @@ const ProfilePage = ({ profile, weightHistory, onAddWeight, onUpdateProfile, onR
               <LineChart data={chartData}>
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'hsl(0 0% 55%)' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: 'hsl(0 0% 55%)' }} axisLine={false} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
-                <Tooltip
-                  contentStyle={{
-                    background: 'hsl(0 0% 7%)',
-                    border: '1px solid hsl(0 0% 15%)',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="hsl(73, 100%, 60%)"
-                  strokeWidth={2}
-                  dot={{ fill: 'hsl(73, 100%, 60%)', r: 4 }}
-                  activeDot={{ r: 6, fill: 'hsl(73, 100%, 60%)' }}
-                />
+                <Tooltip contentStyle={{ background: 'hsl(0 0% 7%)', border: '1px solid hsl(0 0% 15%)', borderRadius: '12px', fontSize: '12px' }} />
+                <Line type="monotone" dataKey="weight" stroke="hsl(73, 100%, 60%)" strokeWidth={2} dot={{ fill: 'hsl(73, 100%, 60%)', r: 4 }} activeDot={{ r: 6, fill: 'hsl(73, 100%, 60%)' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -142,6 +131,15 @@ const ProfilePage = ({ profile, weightHistory, onAddWeight, onUpdateProfile, onR
           </div>
         )}
       </div>
+
+      {/* Logout */}
+      <button
+        onClick={onLogout}
+        className="haptic-press touch-target w-full h-14 rounded-2xl bg-primary/10 text-primary font-display font-semibold flex items-center justify-center gap-2 mb-3"
+      >
+        <LogOut className="w-5 h-5" />
+        Logout
+      </button>
 
       {/* Reset */}
       <button
