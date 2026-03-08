@@ -170,7 +170,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
           onClick={next}
           className="haptic-press touch-target flex-1 h-14 rounded-2xl bg-primary text-primary-foreground font-display font-semibold text-lg flex items-center justify-center gap-2"
         >
-          {step === steps.length - 1 ? 'Start My Journey' : 'Continue'}
+          {step === steps.length - 1 ? 'Start with AURA' : 'Continue'}
           <ChevronRight className="w-5 h-5" />
         </button>
       </div>

@@ -225,7 +225,7 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
               </div>
             ))}
           </div>
-          <button onClick={saveEdit} className="haptic-press touch-target w-full h-12 rounded-xl bg-primary text-primary-foreground font-display font-semibold">
+          <button onClick={saveEdit} className="haptic-press touch-target w-full h-14 rounded-xl bg-primary text-primary-foreground font-display font-semibold">
             Save Changes
           </button>
         </DialogContent>

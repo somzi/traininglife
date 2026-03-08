@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Chrome, Apple, Facebook, Mail, Lock, User, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Chrome, Apple, Facebook, Lock, User, ChevronRight, Eye, EyeOff, Mail } from 'lucide-react';
 import gymBg from '@/assets/gym-bg.jpg';
 
 interface AuthScreenProps {
@@ -34,33 +34,29 @@ const AuthScreen = ({ onLogin, onSignUp }: AuthScreenProps) => {
   };
 
   return (
-    <div className="min-h-screen relative flex flex-col">
+    <div className="min-h-screen relative flex items-center justify-center">
       {/* Background */}
       <div className="absolute inset-0">
         <img src={gymBg} alt="" className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/80 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/85 to-background/95" />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 flex-1 flex flex-col safe-top safe-bottom px-6">
+      {/* Centered Card */}
+      <div className="relative z-10 w-full max-w-[400px] mx-auto px-6">
+        {/* Welcome Header */}
+        <p className="text-muted-foreground text-sm text-center mb-6">Welcome to AURA</p>
+
         {/* Logo */}
-        <div className="flex-1 flex flex-col justify-center items-center pt-12">
-          <div className="mb-2">
-            <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mb-4 mx-auto neon-glow">
-              <span className="font-display font-bold text-2xl text-primary">AI</span>
-            </div>
-            <h1 className="font-display text-4xl font-bold text-center">
-              <span className="neon-text">AI COACH</span>
-            </h1>
-            <p className="text-muted-foreground text-center text-sm mt-2">Your intelligent fitness companion</p>
-          </div>
+        <div className="text-center mb-8">
+          <h1 className="font-display text-5xl font-bold tracking-wider">
+            <span className="neon-text">AURA</span>
+          </h1>
         </div>
 
         {/* Auth Form */}
-        <div className="pb-8 animate-slide-up">
+        <div className="animate-slide-up">
           {isLogin ? (
             <>
-              {/* Login Form */}
               <div className="space-y-3 mb-4">
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -108,18 +104,17 @@ const AuthScreen = ({ onLogin, onSignUp }: AuthScreenProps) => {
 
               {/* Social Buttons */}
               <div className="grid grid-cols-3 gap-3 mb-6">
-                <button className="haptic-press touch-target h-13 rounded-2xl glass-surface flex items-center justify-center gap-2 hover:border-primary/50 transition-all">
+                <button className="haptic-press touch-target h-13 rounded-2xl glass-surface flex items-center justify-center hover:border-primary/50 transition-all">
                   <Chrome className="w-5 h-5" />
                 </button>
-                <button className="haptic-press touch-target h-13 rounded-2xl glass-surface flex items-center justify-center gap-2 hover:border-primary/50 transition-all">
+                <button className="haptic-press touch-target h-13 rounded-2xl glass-surface flex items-center justify-center hover:border-primary/50 transition-all">
                   <Facebook className="w-5 h-5" />
                 </button>
-                <button className="haptic-press touch-target h-13 rounded-2xl glass-surface flex items-center justify-center gap-2 hover:border-primary/50 transition-all">
+                <button className="haptic-press touch-target h-13 rounded-2xl glass-surface flex items-center justify-center hover:border-primary/50 transition-all">
                   <Apple className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Sign Up Link */}
               <p className="text-center text-sm text-muted-foreground">
                 Don't have an account?{' '}
                 <button onClick={() => setIsLogin(false)} className="text-primary font-display font-semibold">
@@ -129,7 +124,6 @@ const AuthScreen = ({ onLogin, onSignUp }: AuthScreenProps) => {
             </>
           ) : (
             <>
-              {/* Sign Up Form */}
               <div className="space-y-3 mb-4">
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

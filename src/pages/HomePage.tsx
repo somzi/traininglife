@@ -55,6 +55,7 @@ const HomePage = ({ userName, profile, selectedDate, onSelectDate, dayLog, calor
       <div className="mb-4 animate-slide-up">
         <p className="text-muted-foreground text-sm">{greeting}</p>
         <h1 className="font-display text-2xl font-bold">Welcome back, <span className="neon-text">{displayName}</span></h1>
+        <p className="text-muted-foreground text-xs mt-0.5">Your AURA Plan</p>
       </div>
 
       <div className="mb-5">
@@ -66,7 +67,7 @@ const HomePage = ({ userName, profile, selectedDate, onSelectDate, dayLog, calor
           <CircularProgress value={dayLog.calories} max={macros.calories} size={200} strokeWidth={14} label="Daily Goal" />
         </div>
 
-        <div className="glass-surface rounded-2xl p-5 mb-5 space-y-4">
+        <div className="rounded-2xl p-5 mb-5 space-y-4 border border-border/50" style={{ background: 'linear-gradient(180deg, hsl(0 0% 7%), hsl(0 0% 4%))' }}>
           <h3 className="font-display font-semibold text-sm flex items-center gap-2">
             <Target className="w-4 h-4 text-primary" />Macro Targets
           </h3>
@@ -92,7 +93,7 @@ const HomePage = ({ userName, profile, selectedDate, onSelectDate, dayLog, calor
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           <div className="glass-surface rounded-2xl p-4 text-center">
             <Award className="w-5 h-5 text-primary mx-auto mb-2" />
             <div className="font-display font-bold text-lg">{streak}</div>
