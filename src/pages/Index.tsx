@@ -8,7 +8,17 @@ import MealsPage from '@/pages/MealsPage';
 import ProfilePage from '@/pages/ProfilePage';
 
 const Index = () => {
-  const { data, updateProfile, addCalories, toggleExercise, addWeight, resetData } = useAppData();
+  const {
+    data,
+    updateProfile,
+    addMealEntry,
+    updateMealEntry,
+    toggleExercise,
+    addWeight,
+    scheduleWorkout,
+    updateScheduledWorkout,
+    resetData,
+  } = useAppData();
   const [activeTab, setActiveTab] = useState('home');
 
   if (!data.profile.onboarded) {
@@ -19,19 +29,34 @@ const Index = () => {
     <div className="min-h-screen bg-background max-w-lg mx-auto relative overflow-x-hidden">
       <div className="min-h-screen">
         {activeTab === 'home' && (
-          <HomePage profile={data.profile} todayLog={data.todayLog} />
+          <HomePage
+            profile={data.profile}
+            todayLog={data.todayLog}
+            calorieHistory={data.calorieHistory}
+            weightHistory={data.weightHistory}
+          />
         )}
         {activeTab === 'workout' && (
-          <WorkoutPage todayLog={data.todayLog} onToggleExercise={toggleExercise} />
+          <WorkoutPage
+            scheduledWorkouts={data.scheduledWorkouts}
+            onScheduleWorkout={scheduleWorkout}
+            onUpdateWorkout={updateScheduledWorkout}
+          />
         )}
         {activeTab === 'meals' && (
-          <MealsPage onQuickAdd={addCalories} />
+          <MealsPage
+            profile={data.profile}
+            todayLog={data.todayLog}
+            onAddMeal={addMealEntry}
+            onUpdateMeal={updateMealEntry}
+          />
         )}
         {activeTab === 'profile' && (
           <ProfilePage
             profile={data.profile}
             weightHistory={data.weightHistory}
             onAddWeight={addWeight}
+            onUpdateProfile={updateProfile}
             onReset={resetData}
           />
         )}

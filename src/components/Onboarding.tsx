@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { UserProfile } from '@/hooks/useAppData';
-import { ChevronRight, ChevronLeft, Target, Flame, Dumbbell } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Target, Flame, Dumbbell, Equal } from 'lucide-react';
 
 interface OnboardingProps {
   onComplete: (profile: Partial<UserProfile>) => void;
@@ -14,7 +14,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
   const [weight, setWeight] = useState(75);
   const [height, setHeight] = useState(175);
   const [age, setAge] = useState(25);
-  const [goal, setGoal] = useState<'fat_loss' | 'muscle_gain'>('fat_loss');
+  const [goal, setGoal] = useState<'fat_loss' | 'muscle_gain' | 'maintenance'>('fat_loss');
 
   const next = () => {
     if (step < steps.length - 1) setStep(step + 1);
@@ -53,7 +53,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
                 <button
                   key={g}
                   onClick={() => setGender(g)}
-                  className={`card-surface haptic-press p-6 text-center transition-all ${
+                  className={`glass-surface rounded-2xl haptic-press p-6 text-center transition-all ${
                     gender === g ? 'border-primary neon-glow' : ''
                   }`}
                 >
@@ -70,7 +70,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
             <h1 className="font-display text-3xl font-bold mb-2">Your measurements</h1>
             <p className="text-muted-foreground mb-8">We'll use this for calorie calculations</p>
             <div className="space-y-6">
-              <div className="card-surface p-5">
+              <div className="glass-surface rounded-2xl p-5">
                 <label className="text-muted-foreground text-sm mb-3 block">Weight (kg)</label>
                 <div className="flex items-center gap-4">
                   <button onClick={() => setWeight(Math.max(40, weight - 1))} className="haptic-press w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl font-bold">−</button>
@@ -78,7 +78,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
                   <button onClick={() => setWeight(Math.min(200, weight + 1))} className="haptic-press w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl font-bold">+</button>
                 </div>
               </div>
-              <div className="card-surface p-5">
+              <div className="glass-surface rounded-2xl p-5">
                 <label className="text-muted-foreground text-sm mb-3 block">Height (cm)</label>
                 <div className="flex items-center gap-4">
                   <button onClick={() => setHeight(Math.max(140, height - 1))} className="haptic-press w-12 h-12 rounded-full bg-muted flex items-center justify-center text-xl font-bold">−</button>
@@ -94,7 +94,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
           <div>
             <h1 className="font-display text-3xl font-bold mb-2">How old are you?</h1>
             <p className="text-muted-foreground mb-8">Age affects your metabolic rate</p>
-            <div className="card-surface p-6">
+            <div className="glass-surface rounded-2xl p-6">
               <div className="flex items-center gap-4">
                 <button onClick={() => setAge(Math.max(16, age - 1))} className="haptic-press w-14 h-14 rounded-full bg-muted flex items-center justify-center text-2xl font-bold">−</button>
                 <span className="flex-1 text-center font-display text-6xl font-bold neon-text">{age}</span>
@@ -111,7 +111,7 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
             <div className="space-y-4">
               <button
                 onClick={() => setGoal('fat_loss')}
-                className={`w-full card-surface haptic-press p-5 flex items-center gap-4 transition-all ${
+                className={`w-full glass-surface rounded-2xl haptic-press p-5 flex items-center gap-4 transition-all ${
                   goal === 'fat_loss' ? 'border-primary neon-glow' : ''
                 }`}
               >
@@ -120,12 +120,12 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
                 </div>
                 <div className="text-left">
                   <div className="font-display font-semibold text-lg">Fat Loss</div>
-                  <div className="text-muted-foreground text-sm">Calorie deficit for lean results</div>
+                  <div className="text-muted-foreground text-sm">TDEE − 500 kcal deficit</div>
                 </div>
               </button>
               <button
                 onClick={() => setGoal('muscle_gain')}
-                className={`w-full card-surface haptic-press p-5 flex items-center gap-4 transition-all ${
+                className={`w-full glass-surface rounded-2xl haptic-press p-5 flex items-center gap-4 transition-all ${
                   goal === 'muscle_gain' ? 'border-primary neon-glow' : ''
                 }`}
               >
@@ -134,7 +134,21 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
                 </div>
                 <div className="text-left">
                   <div className="font-display font-semibold text-lg">Muscle Gain</div>
-                  <div className="text-muted-foreground text-sm">Calorie surplus for growth</div>
+                  <div className="text-muted-foreground text-sm">TDEE + 300 kcal surplus</div>
+                </div>
+              </button>
+              <button
+                onClick={() => setGoal('maintenance')}
+                className={`w-full glass-surface rounded-2xl haptic-press p-5 flex items-center gap-4 transition-all ${
+                  goal === 'maintenance' ? 'border-primary neon-glow' : ''
+                }`}
+              >
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Equal className="w-7 h-7 text-primary" />
+                </div>
+                <div className="text-left">
+                  <div className="font-display font-semibold text-lg">Maintenance</div>
+                  <div className="text-muted-foreground text-sm">Maintain current weight</div>
                 </div>
               </button>
             </div>
