@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { meals, mealCategories } from '@/data/meals';
-import { Search, Plus, Cherry, Egg, Wheat, Fish, Beef, Flame, GlassWater, Moon, CakeSlice, Cookie, Pencil, Target } from 'lucide-react';
+import { Search, Plus, Cherry, Egg, Wheat, Fish, Beef, Flame, GlassWater, Moon, CakeSlice, Cookie, Pencil, Target, Sparkles } from 'lucide-react';
 import type { Meal } from '@/data/meals';
 import type { MealEntry, DailyLog, UserProfile } from '@/hooks/useAppData';
 import { calculateMacros } from '@/hooks/useAppData';
 import MacroBar from '@/components/MacroBar';
 import DateScroller from '@/components/DateScroller';
+import AuraLoader from '@/components/AuraLoader';
+import { generateMealPlan } from '@/lib/smartGenerator';
 import {
   Dialog,
   DialogContent,
@@ -37,8 +39,19 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
   const [slotPicker, setSlotPicker] = useState<Meal | null>(null);
   const [editEntry, setEditEntry] = useState<MealEntry | null>(null);
   const [editValues, setEditValues] = useState({ calories: 0, protein: 0, carbs: 0, fats: 0 });
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiSlots, setAiSlots] = useState<Set<MealSlot>>(new Set());
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingPlan, setPendingPlan] = useState<{ slot: string; meal: Meal }[] | null>(null);
 
   const macros = calculateMacros(profile);
+
+  const remaining = {
+    calories: Math.max(0, macros.calories - dayLog.calories),
+    protein: Math.max(0, macros.protein - dayLog.protein),
+    carbs: Math.max(0, macros.carbs - dayLog.carbs),
+    fats: Math.max(0, macros.fats - dayLog.fats),
+  };
 
   const filtered = meals.filter(m => {
     const matchSearch = m.name.toLowerCase().includes(search.toLowerCase());
@@ -79,6 +92,42 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
     setEditEntry(null);
   };
 
+  const toggleAiSlot = (slot: MealSlot) => {
+    setAiSlots(prev => {
+      const next = new Set(prev);
+      if (next.has(slot)) next.delete(slot); else next.add(slot);
+      return next;
+    });
+  };
+
+  const handleAiGenerate = useCallback(() => {
+    if (aiSlots.size === 0) return;
+    setShowAiDialog(false);
+    setIsGenerating(true);
+  }, [aiSlots]);
+
+  const onAiComplete = useCallback(() => {
+    const plan = generateMealPlan([...aiSlots], remaining);
+    setPendingPlan(plan);
+
+    // Add all planned meals
+    for (const { slot, meal } of plan) {
+      onAddMeal({
+        mealId: meal.id,
+        name: meal.name,
+        slot: slot as MealSlot,
+        calories: meal.calories,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fats: meal.fats,
+      });
+    }
+
+    setAiSlots(new Set());
+    setIsGenerating(false);
+    setTimeout(() => setPendingPlan(null), 3000);
+  }, [aiSlots, remaining, onAddMeal]);
+
   const groupedMeals = mealSlots.reduce((acc, slot) => {
     acc[slot] = (dayLog.mealEntries || []).filter(e => e.slot === slot);
     return acc;
@@ -87,6 +136,10 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
   const hasMeals = (dayLog.mealEntries || []).length > 0;
   const dateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' });
 
+  if (isGenerating) {
+    return <AuraLoader onComplete={onAiComplete} />;
+  }
+
   return (
     <div className="px-5 pt-6 pb-24 safe-top">
       <div className="mb-4 animate-slide-up">
@@ -94,7 +147,6 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
         <p className="text-muted-foreground text-sm">Track nutrition for {dateLabel}</p>
       </div>
 
-      {/* Date Scroller */}
       <div className="mb-4">
         <DateScroller selectedDate={selectedDate} onSelectDate={onSelectDate} />
       </div>
@@ -126,6 +178,27 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
           </div>
           <MacroBar label="Calories" value={dayLog.calories} max={macros.calories} color="hsl(73, 100%, 60%)" />
         </div>
+
+        {/* AI Plan My Day Button */}
+        <button
+          onClick={() => setShowAiDialog(true)}
+          className="haptic-press w-full h-14 rounded-2xl mb-5 font-display font-semibold text-sm flex items-center justify-center gap-3 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all animate-pulse-neon"
+        >
+          <Sparkles className="w-5 h-5" />
+          Plan My Day with AURA
+        </button>
+
+        {/* Remaining macros hint */}
+        {remaining.calories > 0 && (
+          <div className="glass-surface rounded-xl p-3 mb-5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Target className="w-4 h-4 text-primary" />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <span className="text-foreground font-semibold">{remaining.calories} cal</span> remaining · P{remaining.protein}g · C{remaining.carbs}g · F{remaining.fats}g
+            </div>
+          </div>
+        )}
 
         {/* Today's Logged Meals */}
         {hasMeals && (
@@ -227,6 +300,44 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
           </div>
           <button onClick={saveEdit} className="haptic-press touch-target w-full h-14 rounded-xl bg-primary text-primary-foreground font-display font-semibold">
             Save Changes
+          </button>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Slot Picker Dialog */}
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent className="glass-surface border-border rounded-2xl max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Plan My Day
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Select meals to fill and AURA will match your remaining macros ({remaining.calories} cal left)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-3">
+            {mealSlots.map(slot => (
+              <button
+                key={slot}
+                onClick={() => toggleAiSlot(slot)}
+                className={`haptic-press touch-target h-12 rounded-xl font-display font-semibold text-sm transition-all ${
+                  aiSlots.has(slot)
+                    ? 'bg-primary text-primary-foreground neon-glow'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {slot}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleAiGenerate}
+            disabled={aiSlots.size === 0}
+            className="haptic-press touch-target w-full h-14 rounded-xl bg-primary text-primary-foreground font-display font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <Sparkles className="w-4 h-4" />
+            Generate Plan ({aiSlots.size} meals)
           </button>
         </DialogContent>
       </Dialog>
