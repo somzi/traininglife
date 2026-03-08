@@ -1,16 +1,25 @@
 import { useState } from 'react';
 import { UserProfile, WeightEntry, calculateTDEE, calculateMacros } from '@/hooks/useAppData';
-import { Scale, TrendingUp, RotateCcw, User, Target, Flame, Dumbbell } from 'lucide-react';
+import { Scale, TrendingUp, RotateCcw, User, Flame, Dumbbell, Equal } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ProfilePageProps {
   profile: UserProfile;
   weightHistory: WeightEntry[];
   onAddWeight: (weight: number) => void;
+  onUpdateProfile: (profile: Partial<UserProfile>) => void;
   onReset: () => void;
 }
 
-const ProfilePage = ({ profile, weightHistory, onAddWeight, onReset }: ProfilePageProps) => {
+type Goal = 'fat_loss' | 'muscle_gain' | 'maintenance';
+
+const goalConfig: Record<Goal, { label: string; icon: React.ComponentType<{ className?: string }>; desc: string }> = {
+  fat_loss: { label: 'Cutting', icon: Flame, desc: 'TDEE − 500 kcal' },
+  muscle_gain: { label: 'Bulking', icon: Dumbbell, desc: 'TDEE + 300 kcal' },
+  maintenance: { label: 'Maintain', icon: Equal, desc: 'TDEE = target' },
+};
+
+const ProfilePage = ({ profile, weightHistory, onAddWeight, onUpdateProfile, onReset }: ProfilePageProps) => {
   const [newWeight, setNewWeight] = useState(profile.weight.toString());
   const macros = calculateMacros(profile);
   const tdee = calculateTDEE(profile);
@@ -33,7 +42,7 @@ const ProfilePage = ({ profile, weightHistory, onAddWeight, onReset }: ProfilePa
       <h1 className="font-display text-2xl font-bold mb-6">Profile</h1>
 
       {/* User Info */}
-      <div className="card-surface p-5 mb-4 flex items-center gap-4">
+      <div className="glass-surface rounded-2xl p-5 mb-4 flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
           <User className="w-7 h-7 text-primary" />
         </div>
@@ -41,28 +50,46 @@ const ProfilePage = ({ profile, weightHistory, onAddWeight, onReset }: ProfilePa
           <div className="font-display font-semibold">{profile.gender === 'male' ? '♂' : '♀'} {profile.age} years</div>
           <div className="text-muted-foreground text-sm">{profile.height}cm · {profile.weight}kg</div>
         </div>
-        <div className="ml-auto flex items-center gap-1 px-3 py-1 rounded-lg bg-primary/10">
-          {profile.goal === 'fat_loss' ? <Flame className="w-4 h-4 text-primary" /> : <Dumbbell className="w-4 h-4 text-primary" />}
-          <span className="text-xs font-display font-semibold text-primary">
-            {profile.goal === 'fat_loss' ? 'Cutting' : 'Bulking'}
-          </span>
+      </div>
+
+      {/* Goal Switcher */}
+      <div className="glass-surface rounded-2xl p-5 mb-4">
+        <h3 className="font-display font-semibold text-sm mb-3">Training Phase</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(goalConfig) as Goal[]).map(g => {
+            const { label, icon: Icon, desc } = goalConfig[g];
+            const active = profile.goal === g;
+            return (
+              <button
+                key={g}
+                onClick={() => onUpdateProfile({ goal: g })}
+                className={`haptic-press flex flex-col items-center p-3 rounded-xl transition-all ${
+                  active ? 'bg-primary text-primary-foreground neon-glow' : 'bg-muted text-muted-foreground'
+                }`}
+              >
+                <Icon className="w-5 h-5 mb-1" />
+                <span className="font-display font-semibold text-xs">{label}</span>
+                <span className={`text-[9px] mt-0.5 ${active ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{desc}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="card-surface p-4">
+        <div className="glass-surface rounded-2xl p-4">
           <div className="text-muted-foreground text-xs mb-1">Daily TDEE</div>
           <div className="font-display font-bold text-xl">{tdee} <span className="text-sm text-muted-foreground">kcal</span></div>
         </div>
-        <div className="card-surface p-4">
+        <div className="glass-surface rounded-2xl p-4">
           <div className="text-muted-foreground text-xs mb-1">Target Calories</div>
           <div className="font-display font-bold text-xl neon-text">{macros.calories} <span className="text-sm text-muted-foreground">kcal</span></div>
         </div>
       </div>
 
       {/* Weight Tracker */}
-      <div className="card-surface p-5 mb-4">
+      <div className="glass-surface rounded-2xl p-5 mb-4">
         <h3 className="font-display font-semibold text-sm flex items-center gap-2 mb-4">
           <Scale className="w-4 h-4 text-primary" />
           Weight Tracker
