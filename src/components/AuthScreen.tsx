@@ -57,29 +57,35 @@ const AuthScreen = ({ onLogin, onSignUp }: AuthScreenProps) => {
         <div className="animate-slide-up">
           {isLogin ? (
             <>
-              <div className="space-y-3 mb-4">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    value={username}
-                    onChange={e => { setUsername(e.target.value); setError(''); }}
-                    placeholder="Username"
-                    className="w-full h-13 rounded-2xl glass-surface pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary transition-all"
-                  />
+              <div className="space-y-4 mb-5">
+                <div>
+                  <label className="text-xs text-muted-foreground font-semibold mb-1.5 block ml-1">Username</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      value={username}
+                      onChange={e => { setUsername(e.target.value); setError(''); }}
+                      placeholder="Enter your username"
+                      className="w-full h-14 rounded-2xl glass-surface pl-12 pr-4 text-base text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-primary focus:border-primary/50 transition-all"
+                    />
+                  </div>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setError(''); }}
-                    placeholder="Password"
-                    className="w-full h-13 rounded-2xl glass-surface pl-11 pr-12 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary transition-all"
-                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  />
-                  <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2">
-                    {showPassword ? <EyeOff className="w-4 h-4 text-muted-foreground" /> : <Eye className="w-4 h-4 text-muted-foreground" />}
-                  </button>
+                <div>
+                  <label className="text-xs text-muted-foreground font-semibold mb-1.5 block ml-1">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => { setPassword(e.target.value); setError(''); }}
+                      placeholder="Enter your password"
+                      className="w-full h-14 rounded-2xl glass-surface pl-12 pr-14 text-base text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-primary focus:border-primary/50 transition-all"
+                      onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                    />
+                    <button onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 p-1">
+                      {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground" /> : <Eye className="w-5 h-5 text-muted-foreground" />}
+                    </button>
+                  </div>
                 </div>
               </div>
 
