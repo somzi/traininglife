@@ -59,12 +59,19 @@ export interface CalorieHistoryEntry {
   calories: number;
 }
 
+export interface ExerciseLogEntry {
+  exerciseId: string;
+  date: string;
+  sets: { weight: number; reps: number }[];
+}
+
 export interface AppData {
   profile: UserProfile;
   dailyLogs: Record<string, DailyLog>;
   weightHistory: WeightEntry[];
   calorieHistory: CalorieHistoryEntry[];
   scheduledWorkouts: WorkoutSession[];
+  exerciseLogs: ExerciseLogEntry[];
 }
 
 const defaultProfile: UserProfile = {
@@ -94,6 +101,7 @@ const defaultData: AppData = {
   weightHistory: [],
   calorieHistory: [],
   scheduledWorkouts: [],
+  exerciseLogs: [],
 };
 
 export function calculateTDEE(profile: UserProfile) {
@@ -119,13 +127,47 @@ export function calculateMacros(profile: UserProfile) {
   return { calories: Math.round(calories), protein, carbs, fats };
 }
 
+// Helper: get history for a specific exercise
+export function getExerciseHistory(logs: ExerciseLogEntry[], exerciseId: string, limit = 5): ExerciseLogEntry[] {
+  return logs
+    .filter(l => l.exerciseId === exerciseId)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, limit);
+}
+
+// Helper: get the last logged weight for an exercise
+export function getLastWeight(logs: ExerciseLogEntry[], exerciseId: string): number {
+  const history = getExerciseHistory(logs, exerciseId, 1);
+  if (history.length === 0) return 0;
+  const bestSet = history[0].sets.reduce((best, s) => s.weight > best.weight ? s : best, { weight: 0, reps: 0 });
+  return bestSet.weight;
+}
+
+// Helper: get all-time PR weight for an exercise
+export function getExercisePR(logs: ExerciseLogEntry[], exerciseId: string): number {
+  let maxWeight = 0;
+  for (const log of logs) {
+    if (log.exerciseId !== exerciseId) continue;
+    for (const s of log.sets) {
+      if (s.weight > maxWeight) maxWeight = s.weight;
+    }
+  }
+  return maxWeight;
+}
+
+// Helper: calculate volume for a date range
+export function calculateVolumeForRange(logs: ExerciseLogEntry[], startDate: string, endDate: string): number {
+  return logs
+    .filter(l => l.date >= startDate && l.date <= endDate)
+    .reduce((total, log) => total + log.sets.reduce((s, set) => s + set.weight * set.reps, 0), 0);
+}
+
 export function useAppData() {
   const [data, setData] = useState<AppData>(() => {
     try {
       const stored = localStorage.getItem('fitcoach_data');
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Migrate from old todayLog format
         if (parsed.todayLog && !parsed.dailyLogs) {
           parsed.dailyLogs = {};
           if (parsed.todayLog.date) {
@@ -136,6 +178,7 @@ export function useAppData() {
         if (!parsed.dailyLogs) parsed.dailyLogs = {};
         if (!parsed.calorieHistory) parsed.calorieHistory = [];
         if (!parsed.scheduledWorkouts) parsed.scheduledWorkouts = [];
+        if (!parsed.exerciseLogs) parsed.exerciseLogs = [];
         return parsed as AppData;
       }
     } catch {}
@@ -155,7 +198,6 @@ export function useAppData() {
       const current = prev.dailyLogs[date] || emptyDailyLog(date);
       const updated = updater(current);
       const newLogs = { ...prev.dailyLogs, [date]: updated };
-      // Update calorie history
       const history = [...prev.calorieHistory];
       const idx = history.findIndex(h => h.date === date);
       if (idx >= 0) history[idx].calories = updated.calories;
@@ -246,6 +288,22 @@ export function useAppData() {
     }));
   };
 
+  // Log completed exercise sets to history
+  const logExercise = (exerciseId: string, date: string, sets: { weight: number; reps: number }[]) => {
+    // Only log sets that have actual data
+    const validSets = sets.filter(s => s.weight > 0 && s.reps > 0);
+    if (validSets.length === 0) return;
+
+    setData(prev => {
+      // Remove existing log for same exercise+date, then add new
+      const filtered = prev.exerciseLogs.filter(l => !(l.exerciseId === exerciseId && l.date === date));
+      return {
+        ...prev,
+        exerciseLogs: [...filtered, { exerciseId, date, sets: validSets }].slice(-500), // keep last 500
+      };
+    });
+  };
+
   const resetData = () => {
     setData(defaultData);
     localStorage.removeItem('fitcoach_data');
@@ -261,6 +319,7 @@ export function useAppData() {
     scheduleWorkout,
     deleteWorkout,
     updateScheduledWorkout,
+    logExercise,
     resetData,
   };
 }
