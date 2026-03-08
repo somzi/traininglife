@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAppData, getTodayStr } from '@/hooks/useAppData';
+import AuthScreen from '@/components/AuthScreen';
 import Onboarding from '@/components/Onboarding';
 import BottomNav from '@/components/BottomNav';
 import HomePage from '@/pages/HomePage';
@@ -20,11 +21,42 @@ const Index = () => {
     updateScheduledWorkout,
     resetData,
   } = useAppData();
+
   const [activeTab, setActiveTab] = useState('home');
   const [selectedDate, setSelectedDate] = useState(getTodayStr());
+  const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('fitcoach_user') !== null);
+  const [userName, setUserName] = useState(() => localStorage.getItem('fitcoach_user') || '');
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  if (!data.profile.onboarded) {
-    return <Onboarding onComplete={(profile) => updateProfile(profile)} />;
+  const handleLogin = (name: string) => {
+    localStorage.setItem('fitcoach_user', name);
+    setUserName(name);
+    setIsLoggedIn(true);
+  };
+
+  const handleSignUp = () => {
+    setNeedsOnboarding(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('fitcoach_user');
+    setIsLoggedIn(false);
+    setUserName('');
+  };
+
+  if (!isLoggedIn) {
+    return <AuthScreen onLogin={handleLogin} onSignUp={handleSignUp} />;
+  }
+
+  if (needsOnboarding || !data.profile.onboarded) {
+    return (
+      <Onboarding
+        onComplete={(profile) => {
+          updateProfile(profile);
+          setNeedsOnboarding(false);
+        }}
+      />
+    );
   }
 
   const currentLog = getDailyLog(selectedDate);
@@ -34,6 +66,7 @@ const Index = () => {
       <div className="min-h-screen">
         {activeTab === 'home' && (
           <HomePage
+            userName={userName}
             profile={data.profile}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
@@ -64,10 +97,12 @@ const Index = () => {
         )}
         {activeTab === 'profile' && (
           <ProfilePage
+            userName={userName}
             profile={data.profile}
             weightHistory={data.weightHistory}
             onAddWeight={addWeight}
             onUpdateProfile={updateProfile}
+            onLogout={handleLogout}
             onReset={resetData}
           />
         )}
