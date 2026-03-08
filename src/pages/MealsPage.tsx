@@ -7,6 +7,7 @@ import { calculateMacros } from '@/hooks/useAppData';
 import MacroBar from '@/components/MacroBar';
 import DateScroller from '@/components/DateScroller';
 import AuraLoader from '@/components/AuraLoader';
+import RecipeDetail from '@/components/RecipeDetail';
 import { generateMealPlan } from '@/lib/smartGenerator';
 import {
   Dialog,
@@ -43,6 +44,7 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
   const [aiSlots, setAiSlots] = useState<Set<MealSlot>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<{ slot: string; meal: Meal }[] | null>(null);
+  const [recipeDetail, setRecipeDetail] = useState<Meal | null>(null);
 
   const macros = calculateMacros(profile);
 
@@ -138,6 +140,10 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
 
   if (isGenerating) {
     return <AuraLoader onComplete={onAiComplete} />;
+  }
+
+  if (recipeDetail) {
+    return <RecipeDetail meal={recipeDetail} onClose={() => setRecipeDetail(null)} />;
   }
 
   return (
@@ -249,7 +255,7 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
             const Icon = iconMap[meal.icon] || Cherry;
             const isAdded = addedIds.has(meal.id);
             return (
-              <div key={meal.id} className="glass-surface rounded-2xl p-4 flex items-center gap-3 animate-slide-up" style={{ animationDelay: `${index * 30}ms` }}>
+              <div key={meal.id} onClick={() => setRecipeDetail(meal)} className="glass-surface rounded-2xl p-4 flex items-center gap-3 animate-slide-up cursor-pointer hover:border-primary/30 transition-all" style={{ animationDelay: `${index * 30}ms` }}>
                 <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Icon className="w-5 h-5 text-primary" />
                 </div>
@@ -257,7 +263,7 @@ const MealsPage = ({ profile, selectedDate, onSelectDate, dayLog, onAddMeal, onU
                   <div className="font-display font-semibold text-sm truncate">{meal.name}</div>
                   <div className="text-muted-foreground text-[10px]">{meal.calories} cal · P{meal.protein}g · C{meal.carbs}g · F{meal.fats}g</div>
                 </div>
-                <button onClick={() => setSlotPicker(meal)} className={`haptic-press touch-target w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isAdded ? 'bg-primary text-primary-foreground scale-110' : 'bg-muted text-foreground'}`}>
+                <button onClick={(e) => { e.stopPropagation(); setSlotPicker(meal); }} className={`haptic-press touch-target w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isAdded ? 'bg-primary text-primary-foreground scale-110' : 'bg-muted text-foreground'}`}>
                   <Plus className={`w-5 h-5 transition-transform ${isAdded ? 'rotate-45' : ''}`} />
                 </button>
               </div>

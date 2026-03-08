@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
         body: ['"Inter"', 'system-ui', 'sans-serif'],
+        recipe: ['"Lora"', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",

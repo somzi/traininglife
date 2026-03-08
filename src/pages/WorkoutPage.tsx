@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { exercises, muscleGroups } from '@/data/exercises';
-import { Dumbbell, Zap, ArrowUp, ArrowDown, Timer, Flame, Footprints, Plus, ShoppingCart, Check, ChevronLeft, Minus, Sparkles, Clock, Trophy } from 'lucide-react';
+import { Dumbbell, Zap, ArrowUp, ArrowDown, Timer, Flame, Footprints, Plus, ShoppingCart, Check, ChevronLeft, Minus, Sparkles, Clock, Trophy, ExternalLink } from 'lucide-react';
 import type { WorkoutSession, SessionExercise, ExerciseLogEntry } from '@/hooks/useAppData';
 import { getExerciseHistory, getLastWeight, getExercisePR } from '@/hooks/useAppData';
 import DateScroller from '@/components/DateScroller';
@@ -258,6 +258,15 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
                     {pr > 0 && (
                       <span className="text-[10px] text-muted-foreground font-display">PR: {pr}kg</span>
                     )}
+                    <a
+                      href={`https://www.youtube.com/results?search_query=${encodeURIComponent(ex.name + ' exercise tutorial')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="haptic-press w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center"
+                      title="Watch Tutorial"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-destructive" />
+                    </a>
                     <button
                       onClick={() => setHistoryExercise({ id: ex.exerciseId, name: ex.name })}
                       className="haptic-press w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center"
@@ -364,6 +373,15 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <a
+                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(exercise.name + ' exercise tutorial')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="haptic-press w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center"
+                    title="Watch Tutorial"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-destructive" />
+                  </a>
                   <button
                     onClick={() => setHistoryExercise({ id: exercise.id, name: exercise.name })}
                     className="haptic-press w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center"
