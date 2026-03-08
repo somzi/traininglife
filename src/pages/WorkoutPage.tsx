@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import { exercises, muscleGroups } from '@/data/exercises';
-import { Dumbbell, Zap, ArrowUp, ArrowDown, Timer, Flame, Footprints, Plus, ShoppingCart, Check, ChevronLeft, Minus } from 'lucide-react';
+import { Dumbbell, Zap, ArrowUp, ArrowDown, Timer, Flame, Footprints, Plus, ShoppingCart, Check, ChevronLeft, Minus, Sparkles } from 'lucide-react';
 import type { WorkoutSession, SessionExercise } from '@/hooks/useAppData';
 import DateScroller from '@/components/DateScroller';
+import AuraLoader from '@/components/AuraLoader';
+import { generateWorkout } from '@/lib/smartGenerator';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +30,9 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
   const [selectedGroup, setSelectedGroup] = useState('Chest');
   const [cart, setCart] = useState<string[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showAiDialog, setShowAiDialog] = useState(false);
+  const [aiGroups, setAiGroups] = useState<Set<string>>(new Set());
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const existingWorkout = scheduledWorkouts.find(w => w.date === selectedDate && w.confirmed);
   const filtered = exercises.filter(e => e.muscle === selectedGroup);
@@ -49,6 +54,32 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
     setCart([]);
     setShowConfirm(false);
   };
+
+  const toggleAiGroup = (group: string) => {
+    setAiGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group); else next.add(group);
+      return next;
+    });
+  };
+
+  const handleAiGenerate = useCallback(() => {
+    if (aiGroups.size === 0) return;
+    setShowAiDialog(false);
+    setIsGenerating(true);
+  }, [aiGroups]);
+
+  const onAiComplete = useCallback(() => {
+    const selected = generateWorkout([...aiGroups]);
+    const sessionExercises: SessionExercise[] = selected.map(ex => ({
+      exerciseId: ex.id,
+      name: ex.name,
+      sets: Array.from({ length: ex.sets }, () => ({ weight: 0, reps: 0, completed: false })),
+    }));
+    onScheduleWorkout({ date: selectedDate, exercises: sessionExercises, confirmed: true });
+    setAiGroups(new Set());
+    setIsGenerating(false);
+  }, [aiGroups, selectedDate, onScheduleWorkout]);
 
   const updateSetLog = (exIdx: number, setIdx: number, field: 'weight' | 'reps', value: number) => {
     if (!existingWorkout) return;
@@ -74,6 +105,11 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
 
   const dateLabel = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en', { month: 'long', day: 'numeric' });
 
+  // Loading state
+  if (isGenerating) {
+    return <AuraLoader onComplete={onAiComplete} />;
+  }
+
   // Execution mode
   if (existingWorkout) {
     const totalSets = existingWorkout.exercises.reduce((a, e) => a + e.sets.length, 0);
@@ -82,10 +118,7 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
     return (
       <div className="px-5 pt-6 pb-24 safe-top animate-slide-up">
         <div className="flex items-center gap-3 mb-4">
-          <button
-            onClick={handleBackToCalendar}
-            className="haptic-press touch-target w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center"
-          >
+          <button onClick={handleBackToCalendar} className="haptic-press touch-target w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
@@ -94,12 +127,10 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
           </div>
         </div>
 
-        {/* Date Scroller */}
         <div className="mb-4">
           <DateScroller selectedDate={selectedDate} onSelectDate={onSelectDate} />
         </div>
 
-        {/* Progress bar */}
         <div className="h-2 rounded-full bg-muted mb-6 overflow-hidden">
           <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${totalSets > 0 ? (doneSets / totalSets) * 100 : 0}%` }} />
         </div>
@@ -138,10 +169,18 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
         <p className="text-muted-foreground text-sm">Select a date & add exercises</p>
       </div>
 
-      {/* Date Scroller */}
       <div className="mb-4">
         <DateScroller selectedDate={selectedDate} onSelectDate={(d) => { onSelectDate(d); setCart([]); }} />
       </div>
+
+      {/* AI Generate Button */}
+      <button
+        onClick={() => setShowAiDialog(true)}
+        className="haptic-press w-full h-14 rounded-2xl mb-5 font-display font-semibold text-sm flex items-center justify-center gap-3 bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition-all animate-pulse-neon"
+      >
+        <Sparkles className="w-5 h-5" />
+        Generate with AURA AI
+      </button>
 
       <div key={selectedDate} className="animate-slide-up">
         {/* Muscle Group Tabs */}
@@ -209,6 +248,44 @@ const WorkoutPage = ({ selectedDate, onSelectDate, scheduledWorkouts, onSchedule
           </div>
           <button onClick={confirmWorkout} className="haptic-press touch-target w-full h-12 rounded-xl bg-primary text-primary-foreground font-display font-semibold">
             Confirm for {dateLabel}
+          </button>
+        </DialogContent>
+      </Dialog>
+
+      {/* AI Muscle Group Picker Dialog */}
+      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
+        <DialogContent className="glass-surface border-border rounded-2xl max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Smart Workout
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              Select muscle groups and AURA will build your session
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 py-3">
+            {muscleGroups.map(group => (
+              <button
+                key={group}
+                onClick={() => toggleAiGroup(group)}
+                className={`haptic-press touch-target h-12 rounded-xl font-display font-semibold text-sm transition-all ${
+                  aiGroups.has(group)
+                    ? 'bg-primary text-primary-foreground neon-glow'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+              >
+                {group}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={handleAiGenerate}
+            disabled={aiGroups.size === 0}
+            className="haptic-press touch-target w-full h-14 rounded-xl bg-primary text-primary-foreground font-display font-semibold flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+          >
+            <Sparkles className="w-4 h-4" />
+            Generate ({aiGroups.size} groups)
           </button>
         </DialogContent>
       </Dialog>
