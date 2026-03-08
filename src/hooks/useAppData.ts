@@ -61,7 +61,7 @@ export interface CalorieHistoryEntry {
 
 export interface AppData {
   profile: UserProfile;
-  todayLog: DailyLog;
+  dailyLogs: Record<string, DailyLog>;
   weightHistory: WeightEntry[];
   calorieHistory: CalorieHistoryEntry[];
   scheduledWorkouts: WorkoutSession[];
@@ -76,10 +76,10 @@ const defaultProfile: UserProfile = {
   onboarded: false,
 };
 
-const getTodayStr = () => new Date().toISOString().split('T')[0];
+export const getTodayStr = () => new Date().toISOString().split('T')[0];
 
-const defaultDailyLog = (): DailyLog => ({
-  date: getTodayStr(),
+const emptyDailyLog = (date: string): DailyLog => ({
+  date,
   calories: 0,
   protein: 0,
   carbs: 0,
@@ -90,7 +90,7 @@ const defaultDailyLog = (): DailyLog => ({
 
 const defaultData: AppData = {
   profile: defaultProfile,
-  todayLog: defaultDailyLog(),
+  dailyLogs: {},
   weightHistory: [],
   calorieHistory: [],
   scheduledWorkouts: [],
@@ -103,26 +103,19 @@ export function calculateTDEE(profile: UserProfile) {
   } else {
     bmr = 10 * profile.weight + 6.25 * profile.height - 5 * profile.age - 161;
   }
-  const tdee = bmr * 1.55;
-  return Math.round(tdee);
+  return Math.round(bmr * 1.55);
 }
 
 export function calculateMacros(profile: UserProfile) {
   const tdee = calculateTDEE(profile);
   let calories: number;
-
-  if (profile.goal === 'fat_loss') {
-    calories = tdee - 500;
-  } else if (profile.goal === 'muscle_gain') {
-    calories = tdee + 300;
-  } else {
-    calories = tdee;
-  }
+  if (profile.goal === 'fat_loss') calories = tdee - 500;
+  else if (profile.goal === 'muscle_gain') calories = tdee + 300;
+  else calories = tdee;
 
   const protein = Math.round(profile.weight * 2.2);
   const fats = Math.round((calories * 0.25) / 9);
   const carbs = Math.round((calories - protein * 4 - fats * 9) / 4);
-
   return { calories: Math.round(calories), protein, carbs, fats };
 }
 
@@ -131,21 +124,19 @@ export function useAppData() {
     try {
       const stored = localStorage.getItem('fitcoach_data');
       if (stored) {
-        const parsed = JSON.parse(stored) as AppData;
-        if (parsed.todayLog.date !== getTodayStr()) {
-          // Save yesterday's calories before resetting
-          if (parsed.todayLog.calories > 0) {
-            const history = parsed.calorieHistory || [];
-            history.push({ date: parsed.todayLog.date, calories: parsed.todayLog.calories });
-            parsed.calorieHistory = history.slice(-30);
+        const parsed = JSON.parse(stored);
+        // Migrate from old todayLog format
+        if (parsed.todayLog && !parsed.dailyLogs) {
+          parsed.dailyLogs = {};
+          if (parsed.todayLog.date) {
+            parsed.dailyLogs[parsed.todayLog.date] = parsed.todayLog;
           }
-          parsed.todayLog = defaultDailyLog();
+          delete parsed.todayLog;
         }
-        // Ensure new fields exist
+        if (!parsed.dailyLogs) parsed.dailyLogs = {};
         if (!parsed.calorieHistory) parsed.calorieHistory = [];
         if (!parsed.scheduledWorkouts) parsed.scheduledWorkouts = [];
-        if (!parsed.todayLog.mealEntries) parsed.todayLog.mealEntries = [];
-        return parsed;
+        return parsed as AppData;
       }
     } catch {}
     return defaultData;
@@ -155,10 +146,27 @@ export function useAppData() {
     localStorage.setItem('fitcoach_data', JSON.stringify(data));
   }, [data]);
 
+  const getDailyLog = (date: string): DailyLog => {
+    return data.dailyLogs[date] || emptyDailyLog(date);
+  };
+
+  const updateDailyLog = (date: string, updater: (log: DailyLog) => DailyLog) => {
+    setData(prev => {
+      const current = prev.dailyLogs[date] || emptyDailyLog(date);
+      const updated = updater(current);
+      const newLogs = { ...prev.dailyLogs, [date]: updated };
+      // Update calorie history
+      const history = [...prev.calorieHistory];
+      const idx = history.findIndex(h => h.date === date);
+      if (idx >= 0) history[idx].calories = updated.calories;
+      else if (updated.calories > 0) history.push({ date, calories: updated.calories });
+      return { ...prev, dailyLogs: newLogs, calorieHistory: history.slice(-30) };
+    });
+  };
+
   const updateProfile = (profile: Partial<UserProfile>) => {
     setData(prev => {
       const newProfile = { ...prev.profile, ...profile };
-      // If weight changed, also update weight history
       if (profile.weight && profile.weight !== prev.profile.weight) {
         const newHistory = [
           ...prev.weightHistory.filter(w => w.date !== getTodayStr()),
@@ -170,71 +178,33 @@ export function useAppData() {
     });
   };
 
-  const addMealEntry = (entry: Omit<MealEntry, 'id' | 'timestamp'>) => {
+  const addMealEntry = (date: string, entry: Omit<MealEntry, 'id' | 'timestamp'>) => {
     const newEntry: MealEntry = {
       ...entry,
       id: `me_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       timestamp: Date.now(),
     };
-    setData(prev => ({
-      ...prev,
-      todayLog: {
-        ...prev.todayLog,
-        calories: prev.todayLog.calories + entry.calories,
-        protein: prev.todayLog.protein + entry.protein,
-        carbs: prev.todayLog.carbs + entry.carbs,
-        fats: prev.todayLog.fats + entry.fats,
-        mealEntries: [...prev.todayLog.mealEntries, newEntry],
-      },
+    updateDailyLog(date, log => ({
+      ...log,
+      calories: log.calories + entry.calories,
+      protein: log.protein + entry.protein,
+      carbs: log.carbs + entry.carbs,
+      fats: log.fats + entry.fats,
+      mealEntries: [...log.mealEntries, newEntry],
     }));
   };
 
-  const updateMealEntry = (entryId: string, updates: { calories: number; protein: number; carbs: number; fats: number }) => {
-    setData(prev => {
-      const oldEntry = prev.todayLog.mealEntries.find(e => e.id === entryId);
-      if (!oldEntry) return prev;
-      const diffCal = updates.calories - oldEntry.calories;
-      const diffP = updates.protein - oldEntry.protein;
-      const diffC = updates.carbs - oldEntry.carbs;
-      const diffF = updates.fats - oldEntry.fats;
+  const updateMealEntry = (date: string, entryId: string, updates: { calories: number; protein: number; carbs: number; fats: number }) => {
+    updateDailyLog(date, log => {
+      const oldEntry = log.mealEntries.find(e => e.id === entryId);
+      if (!oldEntry) return log;
       return {
-        ...prev,
-        todayLog: {
-          ...prev.todayLog,
-          calories: prev.todayLog.calories + diffCal,
-          protein: prev.todayLog.protein + diffP,
-          carbs: prev.todayLog.carbs + diffC,
-          fats: prev.todayLog.fats + diffF,
-          mealEntries: prev.todayLog.mealEntries.map(e =>
-            e.id === entryId ? { ...e, ...updates } : e
-          ),
-        },
-      };
-    });
-  };
-
-  const addCalories = (cal: number, protein: number, carbs: number, fats: number) => {
-    setData(prev => ({
-      ...prev,
-      todayLog: {
-        ...prev.todayLog,
-        calories: prev.todayLog.calories + cal,
-        protein: prev.todayLog.protein + protein,
-        carbs: prev.todayLog.carbs + carbs,
-        fats: prev.todayLog.fats + fats,
-      },
-    }));
-  };
-
-  const toggleExercise = (exerciseId: string) => {
-    setData(prev => {
-      const completed = prev.todayLog.completedExercises;
-      const newCompleted = completed.includes(exerciseId)
-        ? completed.filter(id => id !== exerciseId)
-        : [...completed, exerciseId];
-      return {
-        ...prev,
-        todayLog: { ...prev.todayLog, completedExercises: newCompleted },
+        ...log,
+        calories: log.calories + (updates.calories - oldEntry.calories),
+        protein: log.protein + (updates.protein - oldEntry.protein),
+        carbs: log.carbs + (updates.carbs - oldEntry.carbs),
+        fats: log.fats + (updates.fats - oldEntry.fats),
+        mealEntries: log.mealEntries.map(e => e.id === entryId ? { ...e, ...updates } : e),
       };
     });
   };
@@ -260,6 +230,13 @@ export function useAppData() {
     }));
   };
 
+  const deleteWorkout = (date: string) => {
+    setData(prev => ({
+      ...prev,
+      scheduledWorkouts: prev.scheduledWorkouts.filter(w => w.date !== date),
+    }));
+  };
+
   const updateScheduledWorkout = (date: string, exercises: SessionExercise[]) => {
     setData(prev => ({
       ...prev,
@@ -269,26 +246,6 @@ export function useAppData() {
     }));
   };
 
-  const saveCalorieHistory = () => {
-    setData(prev => {
-      const history = [...prev.calorieHistory];
-      const existing = history.findIndex(h => h.date === getTodayStr());
-      if (existing >= 0) {
-        history[existing].calories = prev.todayLog.calories;
-      } else {
-        history.push({ date: getTodayStr(), calories: prev.todayLog.calories });
-      }
-      return { ...prev, calorieHistory: history.slice(-30) };
-    });
-  };
-
-  // Auto-save calorie history on changes
-  useEffect(() => {
-    if (data.todayLog.calories > 0) {
-      saveCalorieHistory();
-    }
-  }, [data.todayLog.calories]);
-
   const resetData = () => {
     setData(defaultData);
     localStorage.removeItem('fitcoach_data');
@@ -296,13 +253,13 @@ export function useAppData() {
 
   return {
     data,
+    getDailyLog,
     updateProfile,
-    addCalories,
     addMealEntry,
     updateMealEntry,
-    toggleExercise,
     addWeight,
     scheduleWorkout,
+    deleteWorkout,
     updateScheduledWorkout,
     resetData,
   };
