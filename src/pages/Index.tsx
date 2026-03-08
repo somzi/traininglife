@@ -19,6 +19,7 @@ const Index = () => {
     scheduleWorkout,
     deleteWorkout,
     updateScheduledWorkout,
+    logExercise,
     resetData,
   } = useAppData();
 
@@ -83,6 +84,8 @@ const Index = () => {
             onScheduleWorkout={scheduleWorkout}
             onDeleteWorkout={deleteWorkout}
             onUpdateWorkout={updateScheduledWorkout}
+            exerciseLogs={data.exerciseLogs}
+            onLogExercise={logExercise}
           />
         )}
         {activeTab === 'meals' && (
@@ -100,6 +103,7 @@ const Index = () => {
             userName={userName}
             profile={data.profile}
             weightHistory={data.weightHistory}
+            exerciseLogs={data.exerciseLogs}
             onAddWeight={addWeight}
             onUpdateProfile={updateProfile}
             onLogout={handleLogout}

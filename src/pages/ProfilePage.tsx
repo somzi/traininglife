@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { UserProfile, WeightEntry, calculateTDEE, calculateMacros } from '@/hooks/useAppData';
-import { Scale, TrendingUp, RotateCcw, User, Flame, Dumbbell, Equal, LogOut } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { UserProfile, WeightEntry, ExerciseLogEntry, calculateTDEE, calculateMacros, calculateVolumeForRange } from '@/hooks/useAppData';
+import { Scale, TrendingUp, RotateCcw, User, Flame, Dumbbell, Equal, LogOut, Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ProfilePageProps {
   userName: string;
   profile: UserProfile;
   weightHistory: WeightEntry[];
+  exerciseLogs: ExerciseLogEntry[];
   onAddWeight: (weight: number) => void;
   onUpdateProfile: (profile: Partial<UserProfile>) => void;
   onLogout: () => void;
@@ -21,11 +22,31 @@ const goalConfig: Record<Goal, { label: string; icon: React.ComponentType<{ clas
   maintenance: { label: 'Maintain', icon: Equal, desc: 'TDEE = target' },
 };
 
-const ProfilePage = ({ userName, profile, weightHistory, onAddWeight, onUpdateProfile, onLogout, onReset }: ProfilePageProps) => {
+function getWeekRange(weeksAgo: number) {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const startOfThisWeek = new Date(now);
+  startOfThisWeek.setDate(now.getDate() - dayOfWeek - weeksAgo * 7);
+  const endOfWeek = new Date(startOfThisWeek);
+  endOfWeek.setDate(startOfThisWeek.getDate() + 6);
+  const fmt = (d: Date) => d.toISOString().split('T')[0];
+  return { start: fmt(startOfThisWeek), end: fmt(endOfWeek) };
+}
+
+const ProfilePage = ({ userName, profile, weightHistory, exerciseLogs, onAddWeight, onUpdateProfile, onLogout, onReset }: ProfilePageProps) => {
   const [newWeight, setNewWeight] = useState(profile.weight.toString());
   const macros = calculateMacros(profile);
   const tdee = calculateTDEE(profile);
   const displayName = userName.charAt(0).toUpperCase() + userName.slice(1);
+
+  const { thisWeekVolume, lastWeekVolume, volumeChange } = useMemo(() => {
+    const thisWeek = getWeekRange(0);
+    const lastWeek = getWeekRange(1);
+    const tw = calculateVolumeForRange(exerciseLogs, thisWeek.start, thisWeek.end);
+    const lw = calculateVolumeForRange(exerciseLogs, lastWeek.start, lastWeek.end);
+    const change = lw > 0 ? Math.round(((tw - lw) / lw) * 100) : 0;
+    return { thisWeekVolume: tw, lastWeekVolume: lw, volumeChange: change };
+  }, [exerciseLogs]);
 
   const handleLogWeight = () => {
     const w = parseFloat(newWeight);
@@ -89,6 +110,38 @@ const ProfilePage = ({ userName, profile, weightHistory, onAddWeight, onUpdatePr
           <div className="text-muted-foreground text-xs mb-1">Target Calories</div>
           <div className="font-display font-bold text-xl neon-text">{macros.calories} <span className="text-sm text-muted-foreground">kcal</span></div>
         </div>
+      </div>
+
+      {/* Weekly Volume */}
+      <div className="glass-surface rounded-2xl p-5 mb-4">
+        <h3 className="font-display font-semibold text-sm flex items-center gap-2 mb-3">
+          <Activity className="w-4 h-4 text-primary" />
+          Weekly Volume
+        </h3>
+        <div className="flex items-end gap-4">
+          <div>
+            <div className="font-display font-bold text-2xl neon-text">
+              {thisWeekVolume > 0 ? `${(thisWeekVolume / 1000).toFixed(1)}k` : '0'}
+              <span className="text-sm text-muted-foreground ml-1">kg</span>
+            </div>
+            <div className="text-muted-foreground text-xs mt-0.5">This week's total volume</div>
+          </div>
+          {lastWeekVolume > 0 && (
+            <div className={`flex items-center gap-1 text-sm font-display font-semibold ${volumeChange >= 0 ? 'text-primary' : 'text-destructive'}`}>
+              {volumeChange >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+              {volumeChange >= 0 ? '+' : ''}{volumeChange}%
+              <span className="text-muted-foreground text-xs font-normal ml-1">vs last week</span>
+            </div>
+          )}
+        </div>
+        {lastWeekVolume > 0 && (
+          <div className="mt-3 h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${Math.min(100, (thisWeekVolume / Math.max(lastWeekVolume, 1)) * 100)}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Weight Tracker */}
